@@ -1,0 +1,4 @@
+include description.txt
+include long_description.rst
+include README.rst
+include requirements.txt

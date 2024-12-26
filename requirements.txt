@@ -1,0 +1,7 @@
+pytz
+google-generativeai
+transformers
+accelerate
+torch
+numpy
+PyVarTools
