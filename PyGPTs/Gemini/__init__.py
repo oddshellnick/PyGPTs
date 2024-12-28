@@ -8,6 +8,7 @@ import google.generativeai.types as genai_types
 from google.ai.generativelanguage_v1 import GenerateContentResponse
 
 import PyGPTs.Gemini.data as data
+import PyGPTs.Gemini.types as types
 import PyGPTs.Gemini.errors as errors
 
 
@@ -309,7 +310,7 @@ class Gemini:
 
     def send_message(
         self,
-        message: data.GeminiContentDict,
+        message: types.gemini_message_input,
         stream: bool = False,
         request_options: genai_types.RequestOptions = genai_types.RequestOptions(),
         chat_index: int = -1,
@@ -384,7 +385,7 @@ class Gemini:
 
     def generate_content(
         self,
-        message: data.GeminiContentDict,
+        message: types.gemini_generate_input,
         stream: bool = False,
         request_options: genai_types.RequestOptions = genai_types.RequestOptions(),
     ) -> GenerateContentResponse:

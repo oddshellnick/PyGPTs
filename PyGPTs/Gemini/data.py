@@ -1,6 +1,3 @@
-import typing
-
-
 class GeminiModels:
     """
     Stores string identifiers for different Gemini models.
@@ -60,21 +57,6 @@ class GeminiLimits:
     tokens_per_minute = {"gemini-1.5-pro": 32 * 10**3, "gemini-1.5-flash": 10**6, "gemini-1.0-pro": 32 * 10**3}
 
 
-class GeminiFileData(typing.TypedDict):
-    """
-    Represents file data for Gemini.
-
-    Attributes:
-        mime_type (str): The MIME type of the file.
-        file_uri (str): The URI of the file.
-
-    :Usage:
-        file_data: GeminiFileData = {"mime_type": GeminiMimeTypes.image_jpeg, "file_uri": "gs://my-bucket/image.jpg"}
-    """
-    mime_type: str
-    file_uri: str
-
-
 class GeminiContentRoles:
     """
     Defines the roles for Gemini content.
@@ -92,18 +74,3 @@ class GeminiContentRoles:
     """
     user = "user"
     model = "model"
-
-
-class GeminiContentDict(typing.TypedDict):
-    """
-    Represents a dictionary for Gemini content.
-
-    Attributes:
-        content (str): The actual content string.
-        role (str): The role of the content (e.g., user or model).
-
-    :Usage:
-        content_dict: GeminiContentDict = {"content": "Hello, Gemini!", "role": GeminiContentRoles.user}
-    """
-    content: str
-    role: str
