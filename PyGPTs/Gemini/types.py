@@ -16,20 +16,23 @@ class GeminiFileData(typing.TypedDict):
     file_uri: str
 
 
+gemini_content_part = typing.Union[str, GeminiFileData]
+
+
 class GeminiContentDict(typing.TypedDict):
     """
     Represents a dictionary for Gemini content.
 
     Attributes:
-        content (str): The actual content string.
+        parts (list[gemini_content_part]): The actual content parts.
         role (str): The role of the content (e.g., user or model).
 
     :Usage:
         content_dict: GeminiContentDict = {"content": "Hello, Gemini!", "role": GeminiContentRoles.user}
     """
-    content: str | GeminiFileData
+    parts: list[gemini_content_part]
     role: str
 
 
 gemini_message_input = typing.Union[str, GeminiContentDict, GeminiFileData]
-gemini_generate_input = typing.Union[str, GeminiContentDict, GeminiFileData, typing.Iterable[GeminiContentDict, GeminiFileData]]
+gemini_generate_input = typing.Union[str, GeminiContentDict, GeminiFileData, typing.Iterable[typing.Union[GeminiContentDict, GeminiFileData]]]
