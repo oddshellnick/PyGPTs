@@ -309,10 +309,6 @@ class GeminiModelSettings:
 					response_mime_type=data.GeminiMimeTypes.text_plain,
 					safety_settings=[
 						genai_types.SafetySettingDict(
-								category=genai_types.HarmCategory.HARM_CATEGORY_UNSPECIFIED,
-								threshold=genai_types.HarmBlockThreshold.OFF
-						),
-						genai_types.SafetySettingDict(
 								category=genai_types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
 								threshold=genai_types.HarmBlockThreshold.OFF
 						),
