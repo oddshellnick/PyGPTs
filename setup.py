@@ -1,42 +1,41 @@
-import os
-
+import pathlib
 from setuptools import find_packages, setup
 
 
 def get_long_description() -> str:
-    lib_folder = os.path.dirname(os.path.realpath(__file__))
-    long_description_path = f"{lib_folder}/long_description.rst"
+	long_description_path = pathlib.Path("long_description.md")
 
-    return open(long_description_path, "r", encoding="utf-8").read()
+	if long_description_path.is_file():
+		return open(long_description_path, "r", encoding="utf-8").read()
+	else:
+		raise FileNotFoundError("long_description.md not found")
 
 
 def get_install_requires() -> list[str]:
-    lib_folder = os.path.dirname(os.path.realpath(__file__))
-    requirement_path = f"{lib_folder}/requirements.txt"
+	requirement_path = pathlib.Path("requirements.txt")
 
-    install_requires = []
-
-    if os.path.isfile(requirement_path):
-        install_requires = open(requirement_path, "r", encoding="utf-8").read().splitlines()
-
-    return install_requires
+	if requirement_path.is_file():
+		return open(requirement_path, "r", encoding="utf-8").read().splitlines()
+	else:
+		raise FileNotFoundError("requirements.txt not found")
 
 
 def get_description() -> str:
-    lib_folder = os.path.dirname(os.path.realpath(__file__))
-    description_path = f"{lib_folder}/description.txt"
+	description_path = pathlib.Path("description.txt")
 
-    return open(description_path, "r", encoding="utf-8").read()
-
+	if description_path.is_file():
+		return open(description_path, "r", encoding="utf-8").read()
+	else:
+		raise FileNotFoundError("description.txt not found")
 
 setup(
-    name="PyGPTs",
-    version="1.0.7",
-    author="oddshellnick",
-    author_email="oddshellnick.programming@gmail.com",
-    description=get_description(),
-    long_description=get_long_description(),
-    long_description_content_type="text/x-rst",
-    packages=find_packages(),
-    install_requires=get_install_requires(),
+		name="PyGPTs",
+		version="2.0.0",
+		author="oddshellnick",
+		author_email="oddshellnick.programming@gmail.com",
+		description=get_description(),
+		long_description=get_long_description(),
+		long_description_content_type="text/markdown",
+		packages=find_packages(exclude=["unit_tests*"]),
+		install_requires=get_install_requires()
 )

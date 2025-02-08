@@ -1,7 +1,9 @@
-pytz
-google-generativeai
-transformers
-accelerate
-torch
-numpy
-PyVarTools
+setuptools
+protobuf~=5.28.3
+pytz~=2024.2
+torch~=2.5.1
+pyvartools~=1.3.10
+transformers~=4.46.2
+google-genai~=1.0.0
+numpy~=2.1.3
+parameterized~=0.9.0
