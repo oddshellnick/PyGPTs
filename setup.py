@@ -31,7 +31,7 @@ def get_description() -> str:
 
 setup(
 		name="PyGPTs",
-		version="2.0.1",
+		version="2.0.2",
 		author="oddshellnick",
 		author_email="oddshellnick.programming@gmail.com",
 		description=get_description(),
