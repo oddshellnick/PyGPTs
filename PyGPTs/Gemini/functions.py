@@ -1,5 +1,6 @@
 import re
 import typing
+from google.genai.types import GenerateContentResponse
 
 
 def find_base_model(model_version: str) -> typing.Optional[str]:
@@ -28,3 +29,62 @@ def find_base_model(model_version: str) -> typing.Optional[str]:
 	)
 	
 	return found.group(0) if found else None
+
+
+def extract_token_count_from_gemini_response(gemini_response: GenerateContentResponse) -> int:
+	"""
+	Extracts the total token count from a Gemini API response object.
+
+	This function sums up the `token_count` attribute of each candidate within a `GenerateContentResponse`.
+	If a candidate does not have a `token_count` (is None), it's treated as having 0 tokens.
+
+	Args:
+		gemini_response (GenerateContentResponse): The Gemini API response object from which to extract the token count.
+
+	Returns:
+		int: The total token count from the Gemini response.
+
+	:Usage:
+		response = gemini_client.generate_content("Write a short description")
+		token_count = extract_token_count_from_gemini_response(response)
+		print(f"Token count: {token_count}")
+	"""
+	if gemini_response.candidates is not None:
+		return sum(
+				candidate.token_count
+				for candidate in gemini_response.candidates
+				if candidate.token_count is not None
+		)
+	
+	return 0
+
+
+def extract_text_from_gemini_response(gemini_response: GenerateContentResponse) -> str:
+	"""
+	Extracts the text content from a Gemini API response object.
+
+	This function iterates through the candidates and parts within a `GenerateContentResponse` object
+	to concatenate and return the text content.
+
+	Args:
+		gemini_response (GenerateContentResponse): The Gemini API response object from which to extract text.
+
+	Returns:
+		str: The extracted text content from the Gemini response.
+
+	:Usage:
+		response = gemini_client.generate_content("Write a short description")
+		text_content = extract_text_from_gemini_response(response)
+		print(text_content)
+	"""
+	if gemini_response.candidates is not None:
+		return "".join(
+				part.text
+				for candidate in gemini_response.candidates
+				if candidate.content is not None
+				and candidate.content.parts is not None
+				for part in candidate.content.parts
+				if part.text is not None
+		)
+	
+	return ""

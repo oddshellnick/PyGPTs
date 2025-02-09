@@ -433,7 +433,7 @@ class TestGeminiClient(unittest.IsolatedAsyncioTestCase):
 	@patch("PyGPTs.Gemini.GeminiLimiter")
 	def test_current_limit_day_property(self, mock_gemini_limiter_init, mock_genai_client_init):
 		"""Test current_limit_day property returns limiter"s current limit day."""
-		start_day = datetime.datetime(2024, 1, 1, tzinfo=pytz.timezone("America/New_York"))
+		limit_day = datetime.datetime(2024, 1, 1, tzinfo=pytz.timezone("America/New_York"))
 		
 		client_settings = GeminiClientSettings(api_key="test_api_key", model_settings=GeminiModelSettings())
 		
@@ -441,13 +441,13 @@ class TestGeminiClient(unittest.IsolatedAsyncioTestCase):
 		mock_genai_client_init.return_value = mock_genai_client
 		
 		mock_limiter = MagicMock(spec=GeminiLimiter)
-		mock_limiter.start_day = start_day
+		mock_limiter.limit_day = limit_day
 		mock_gemini_limiter_init.return_value = mock_limiter
 		
 		client_instance = GeminiClient(gemini_client_settings=client_settings)
 		current_limit_day = client_instance.current_limit_day
 		
-		self.assertEqual(current_limit_day, start_day)
+		self.assertEqual(current_limit_day, limit_day)
 	
 	@patch("google.genai.Client")
 	@patch("PyGPTs.Gemini.GeminiLimiter")
@@ -455,7 +455,7 @@ class TestGeminiClient(unittest.IsolatedAsyncioTestCase):
 		"""Test day_usage property returns limiter"s day usage."""
 		request_per_day_used = 1
 		request_per_day_limit = 10
-		start_day = datetime.datetime(2024, 1, 1, tzinfo=pytz.timezone("America/New_York"))
+		limit_day = datetime.datetime(2024, 1, 1, tzinfo=pytz.timezone("America/New_York"))
 		
 		client_settings = GeminiClientSettings(api_key="test_api_key", model_settings=GeminiModelSettings())
 		
@@ -465,7 +465,7 @@ class TestGeminiClient(unittest.IsolatedAsyncioTestCase):
 		mock_limiter = MagicMock(spec=GeminiLimiter)
 		mock_limiter.request_per_day_used = request_per_day_used
 		mock_limiter.request_per_day_limit = request_per_day_limit
-		mock_limiter.start_day = start_day
+		mock_limiter.limit_day = limit_day
 		mock_gemini_limiter_init.return_value = mock_limiter
 		
 		client_instance = GeminiClient(gemini_client_settings=client_settings)
@@ -476,7 +476,7 @@ class TestGeminiClient(unittest.IsolatedAsyncioTestCase):
 				{
 					"used_requests": request_per_day_used,
 					"requests_limit": request_per_day_limit,
-					"date": start_day
+					"date": limit_day
 				}
 		)
 	
@@ -504,7 +504,6 @@ class TestGeminiClient(unittest.IsolatedAsyncioTestCase):
 		
 		mock_limiter.async_add_data.assert_called_once_with(10)
 		mock_genai_client.aio.models.generate_content.assert_called_once()
-		mock_limiter.add_context.assert_called_once_with(5)
 	
 	@patch("google.genai.Client")
 	@patch("PyGPTs.Gemini.GeminiLimiter")
@@ -535,11 +534,10 @@ class TestGeminiClient(unittest.IsolatedAsyncioTestCase):
 		message = "Generate async content stream"
 		stream = client_instance.async_generate_content_stream(message=message)
 		
-		context_add_calls = []
+		parts_generated = []
 		async for part in stream:
-			context_add_calls.append(part)
-			mock_limiter.add_context.assert_called_with(sum(candidate.token_count for candidate in part.candidates))
-		self.assertEqual(len(context_add_calls), 2)
+			parts_generated.append(part)
+		self.assertEqual(len(parts_generated), 2)
 		
 		mock_limiter.async_add_data.assert_called_once_with(8)
 		mock_genai_client.aio.models.generate_content_stream.assert_called_once_with(
@@ -573,7 +571,6 @@ class TestGeminiClient(unittest.IsolatedAsyncioTestCase):
 		
 		mock_limiter.add_data.assert_called_once_with(10)
 		mock_genai_client.models.generate_content.assert_called_once()
-		mock_limiter.add_context.assert_called_once_with(5)
 	
 	@patch("google.genai.Client")
 	@patch("PyGPTs.Gemini.GeminiLimiter")
@@ -605,11 +602,10 @@ class TestGeminiClient(unittest.IsolatedAsyncioTestCase):
 		message = "Generate content stream"
 		stream = client_instance.generate_content_stream(message=message)
 		
-		context_add_calls = []
+		parts_generated = []
 		for part in stream:
-			context_add_calls.append(part)
-			mock_limiter.add_context.assert_called_with(sum(candidate.token_count for candidate in part.candidates))
-		self.assertEqual(len(context_add_calls), 2)
+			parts_generated.append(part)
+		self.assertEqual(len(parts_generated), 2)
 		
 		mock_limiter.add_data.assert_called_once_with(8)
 		mock_genai_client.models.generate_content_stream.assert_called_once_with(
@@ -1144,7 +1140,7 @@ class TestBaseGeminiChat(unittest.TestCase):
 		mock_create_chat.return_value = (mock_chat_instance, model_settings.model_name)
 		
 		chat_instance = BaseGeminiChat(client=mock_client, model_settings=model_settings)
-		expected_day = chat_instance.limiter.start_day
+		expected_day = chat_instance.limiter.limit_day
 		current_limit_day = chat_instance.current_limit_day
 		
 		self.assertEqual(current_limit_day, expected_day)
@@ -1160,7 +1156,7 @@ class TestBaseGeminiChat(unittest.TestCase):
 		chat_instance = BaseGeminiChat(client=mock_client, model_settings=model_settings)
 		chat_instance.limiter.request_per_day_used = 50
 		chat_instance.limiter.request_per_day_limit = 100
-		expected_day = chat_instance.limiter.start_day
+		expected_day = chat_instance.limiter.limit_day
 		
 		day_usage = chat_instance.day_usage
 		self.assertEqual(
@@ -1280,6 +1276,7 @@ class TestBaseGeminiChat(unittest.TestCase):
 		
 		mock_chat_instance = MagicMock()
 		mock_chat_instance._curated_history = initial_history
+		
 		mock_client = MagicMock(spec=Client)
 		model_settings = GeminiModelSettings(model_name="gemini-2.0-pro")
 		mock_create_chat.return_value = (mock_chat_instance, model_settings.model_name)
@@ -1321,7 +1318,7 @@ class TestGeminiModel(unittest.TestCase):
 		gemini_model = GeminiModel(gemini_model_settings=model_settings)
 		limiter = gemini_model.limiter
 		
-		self.assertEqual(limiter.start_day, model_settings.start_day)
+		self.assertEqual(limiter.limit_day, model_settings.start_day)
 		self.assertEqual(limiter.request_per_day_used, model_settings.request_per_day_used)
 		self.assertEqual(limiter.request_per_day_limit, model_settings.request_per_day_limit)
 		self.assertEqual(
@@ -1353,7 +1350,7 @@ class TestGeminiLimiter(unittest.TestCase):
 		self.raise_error_on_minute_limit = True
 		
 		self.limiter = GeminiLimiter(
-				start_day=self.start_day,
+				limit_day=self.start_day,
 				request_per_day_used=self.request_per_day_used,
 				request_per_day_limit=self.request_per_day_limit,
 				request_per_minute_limit=self.request_per_minute_limit,
@@ -1409,7 +1406,7 @@ class TestGeminiLimiter(unittest.TestCase):
 		self.assertFalse(self.limiter.check_day_limits())
 		
 		new_day = datetime.datetime.now(tz=pytz.timezone("America/New_York")).replace(day=self.start_day.day + 1)
-		self.limiter.start_day = new_day
+		self.limiter.limit_day = new_day
 		self.assertTrue(self.limiter.check_day_limits())
 	
 	def test_async_check_limits_context_limit_exceeded(self):
@@ -1491,7 +1488,7 @@ class TestGeminiLimiter(unittest.TestCase):
 		self.assertFalse(self.limiter.check_day_limits())
 		
 		new_day = datetime.datetime.now(tz=pytz.timezone("America/New_York")).replace(day=self.start_day.day + 1)
-		self.limiter.start_day = new_day
+		self.limiter.limit_day = new_day
 		self.assertTrue(self.limiter.check_day_limits())
 	
 	def test_check_limits_context_limit_exceeded(self):
@@ -1597,7 +1594,7 @@ class TestGeminiLimiter(unittest.TestCase):
 	
 	def test_init(self):
 		"""Test the initialization of GeminiLimiter."""
-		self.assertEqual(self.limiter.start_day, self.start_day)
+		self.assertEqual(self.limiter.limit_day, self.start_day)
 		self.assertEqual(self.limiter.request_per_day_limit, self.request_per_day_limit)
 		self.assertEqual(self.limiter.request_per_minute_limit, self.request_per_minute_limit)
 		self.assertEqual(self.limiter.tokens_per_minute_limit, self.tokens_per_minute_limit)

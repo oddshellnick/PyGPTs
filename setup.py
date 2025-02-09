@@ -4,7 +4,7 @@ from setuptools import find_packages, setup
 
 def get_long_description() -> str:
 	long_description_path = pathlib.Path("long_description.md")
-
+	
 	if long_description_path.is_file():
 		return open(long_description_path, "r", encoding="utf-8").read()
 	else:
@@ -13,7 +13,7 @@ def get_long_description() -> str:
 
 def get_install_requires() -> list[str]:
 	requirement_path = pathlib.Path("requirements.txt")
-
+	
 	if requirement_path.is_file():
 		return open(requirement_path, "r", encoding="utf-8").read().splitlines()
 	else:
@@ -22,15 +22,16 @@ def get_install_requires() -> list[str]:
 
 def get_description() -> str:
 	description_path = pathlib.Path("description.txt")
-
+	
 	if description_path.is_file():
 		return open(description_path, "r", encoding="utf-8").read()
 	else:
 		raise FileNotFoundError("description.txt not found")
 
+
 setup(
 		name="PyGPTs",
-		version="2.0.1",
+		version="2.0.2",
 		author="oddshellnick",
 		author_email="oddshellnick.programming@gmail.com",
 		description=get_description(),
