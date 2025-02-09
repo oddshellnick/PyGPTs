@@ -1,6 +1,75 @@
 import unittest
+from unittest.mock import MagicMock
 from parameterized import parameterized
-from PyGPTs.Gemini.functions import find_base_model
+from google.genai.types import (
+	Candidate,
+	Content,
+	GenerateContentResponse,
+	Part
+)
+from PyGPTs.Gemini.functions import (
+	extract_text_from_gemini_response,
+	extract_token_count_from_gemini_response,
+	find_base_model
+)
+
+
+class TestGeminiResponseTokenCountExtraction(unittest.TestCase):
+	@parameterized.expand([(None, 0), ([], 0), ([None], 0), ([0], 0), ([15, None], 15), ([10, 20], 30)])
+	def test_extract_token_count_from_gemini_response(self, candidates, expected_count):
+		"""Test extract_token_count_from_gemini_response function."""
+		if candidates is not None:
+			mock_candidates = [
+				MagicMock(spec=Candidate, token_count=candidate) for candidate in candidates
+			]
+		else:
+			mock_candidates = None
+
+		mock_gemini_response = MagicMock(spec=GenerateContentResponse, candidates=mock_candidates)
+
+		token_count = extract_token_count_from_gemini_response(mock_gemini_response)
+		self.assertEqual(token_count, expected_count)
+
+
+class TestGeminiResponseTextExtraction(unittest.TestCase):
+	@parameterized.expand(
+			[
+				(None, ""),
+				([], ""),
+				([{"content": None}], ""),
+				([{"content": {"parts": None}}], ""),
+				(
+						[{"content": {"parts": ["This is part 1. ", "This is part 2."]}}],
+						"This is part 1. This is part 2."
+				)
+			]
+	)
+	def test_extract_text_from_gemini_response(self, candidates, expected_text):
+		"""Test extract_text_from_gemini_response function."""
+		if candidates is not None:
+			mock_candidates = []
+
+			for candidate in candidates:
+				if candidate["content"] is not None:
+					if candidate["content"]["parts"] is not None:
+						mock_parts = []
+						for part in candidate["content"]["parts"]:
+							mock_parts.append(MagicMock(spec=Part, text=part))
+					else:
+						mock_parts = None
+
+					mock_content = MagicMock(spec=Content, parts=mock_parts)
+				else:
+					mock_content = None
+
+				mock_candidates.append(MagicMock(spec=Candidate, content=mock_content))
+		else:
+			mock_candidates = None
+
+		mock_gemini_response = MagicMock(spec=GenerateContentResponse, candidates=mock_candidates)
+
+		extracted_text = extract_text_from_gemini_response(mock_gemini_response)
+		self.assertEqual(extracted_text, expected_text)
 
 
 class TestFindBaseModel(unittest.TestCase):
@@ -33,5 +102,9 @@ def functions_test_suite():
 	test_loader = unittest.TestLoader()
 	
 	suite.addTest(test_loader.loadTestsFromTestCase(TestFindBaseModel))
+	suite.addTest(test_loader.loadTestsFromTestCase(TestGeminiResponseTextExtraction))
+	suite.addTest(
+			test_loader.loadTestsFromTestCase(TestGeminiResponseTokenCountExtraction)
+	)
 	
 	return suite
