@@ -9,8 +9,11 @@ import PyGPTs.Gemini.types as types
 import PyGPTs.Gemini.errors as errors
 import google.genai.types as genai_types
 from google.genai.chats import AsyncChat, Chat
-from PyGPTs.Gemini.functions import find_base_model
 from google.ai.generativelanguage_v1 import GenerateContentResponse
+from PyGPTs.Gemini.functions import (
+	extract_token_count_from_gemini_response,
+	find_base_model
+)
 
 
 class GeminiLimiter:
@@ -18,7 +21,7 @@ class GeminiLimiter:
 	Manages rate limiting for Gemini API requests.
 
 	Attributes:
-		start_day (datetime.datetime): The start day for tracking daily usage limits.
+		limit_day (datetime.datetime): The limit day for tracking daily usage limits.
 		request_per_day_used (int): The number of requests used so far today.
 		request_per_day_limit (int): The maximum number of requests allowed per day.
 		request_per_minute_limit (int): The maximum number of requests allowed per minute.
@@ -33,7 +36,7 @@ class GeminiLimiter:
 	
 	def __init__(
 			self,
-			start_day: datetime.datetime,
+			limit_day: datetime.datetime,
 			request_per_day_used: int,
 			request_per_day_limit: int,
 			request_per_minute_limit: int,
@@ -46,7 +49,7 @@ class GeminiLimiter:
 		Initializes an instance of the GeminiLimiter class.
 
 		Args:
-			start_day (datetime.datetime): The start day for tracking daily usage.
+			limit_day (datetime.datetime): The limit day for tracking daily usage.
 			request_per_day_used (int): Initial count of requests used per day.
 			request_per_day_limit (int): Maximum requests allowed per day.
 			request_per_minute_limit (int): Maximum requests allowed per minute.
@@ -55,7 +58,7 @@ class GeminiLimiter:
 			context_limit (int): The maximum amount of context allowed.
 			raise_error_on_minute_limit (bool): Whether to raise exceptions when hitting minute limits.
 		"""
-		self.start_day = start_day
+		self.limit_day = limit_day
 		self.request_per_day_limit = request_per_day_limit
 		self.request_per_minute_limit = request_per_minute_limit
 		self.tokens_per_minute_limit = tokens_per_minute_limit
@@ -66,21 +69,6 @@ class GeminiLimiter:
 		self.context_used = context_used
 		self.context_limit = context_limit
 		self.start_time = time.time()
-	
-	def add_context(self, tokens: int):
-		"""
-		Adds to the context usage counter and checks if the context limit has been exceeded.
-
-		Args:
-			tokens (int): The number of tokens to add to the context usage.
-
-		Raises:
-			GeminiContextLimitException: If adding the tokens causes the context usage to exceed the limit.
-		"""
-		self.context_used += tokens
-		
-		if self.context_used > self.context_limit:
-			raise errors.GeminiContextLimitException()
 	
 	def check_limits(self, last_tokens: int):
 		"""
@@ -98,7 +86,7 @@ class GeminiLimiter:
 		elapsed_time = time.time() - self.start_time
 		current_date = datetime.datetime.now(tz=pytz.timezone("America/New_York"))
 		
-		if current_date.date() == self.start_day.date() and self.request_per_day_used > self.request_per_day_limit:
+		if current_date.date() == self.limit_day.date() and self.request_per_day_used > self.request_per_day_limit:
 			raise errors.GeminiDayLimitException()
 		
 		if self.context_used > self.context_limit:
@@ -107,7 +95,7 @@ class GeminiLimiter:
 		if elapsed_time < 60:
 			if self.request_per_day_used > self.request_per_day_limit:
 				self.request_per_day_used = 1
-				self.start_day = datetime.datetime(
+				self.limit_day = datetime.datetime(
 						year=current_date.year,
 						month=current_date.month,
 						day=current_date.day,
@@ -132,6 +120,21 @@ class GeminiLimiter:
 		
 			self.start_time = time.time()
 	
+	def add_context(self, tokens: int):
+		"""
+		Adds to the context usage counter and checks if the context limit has been exceeded.
+
+		Args:
+			tokens (int): The number of tokens to add to the context usage.
+
+		Raises:
+			GeminiContextLimitException: If adding the tokens causes the context usage to exceed the limit.
+		"""
+		if self.context_used + tokens > self.context_limit:
+			raise errors.GeminiContextLimitException()
+		
+		self.context_used += tokens
+	
 	def add_data(self, tokens: int):
 		"""
 		Increments the usage counters for requests, tokens and context.
@@ -142,9 +145,18 @@ class GeminiLimiter:
 		self.request_per_day_used += 1
 		self.request_per_minute_used += 1
 		self.tokens_per_minute_used += tokens
-		self.context_used += tokens
 		
+		self.add_context(tokens)
 		self.check_limits(tokens)
+	
+	def check_day_limits(self):
+		"""
+		Checks if the current day's request limit has been reached or if the date has changed.
+
+		Returns:
+			bool: True if requests can still be made within the daily limit, False otherwise.
+		"""
+		return self.request_per_day_used < self.request_per_day_limit or datetime.datetime.now(tz=pytz.timezone("America/New_York")).date() != self.limit_day.date()
 	
 	async def async_check_limits(self, last_tokens: int):
 		"""
@@ -163,7 +175,7 @@ class GeminiLimiter:
 		elapsed_time = time.time() - self.start_time
 		current_date = datetime.datetime.now(tz=pytz.timezone("America/New_York"))
 		
-		if current_date.date() == self.start_day.date() and self.request_per_day_used > self.request_per_day_limit:
+		if not self.check_day_limits():
 			raise errors.GeminiDayLimitException()
 		
 		if self.context_used > self.context_limit:
@@ -172,7 +184,7 @@ class GeminiLimiter:
 		if elapsed_time < 60:
 			if self.request_per_day_used > self.request_per_day_limit:
 				self.request_per_day_used = 1
-				self.start_day = datetime.datetime(
+				self.limit_day = datetime.datetime(
 						year=current_date.year,
 						month=current_date.month,
 						day=current_date.day,
@@ -207,18 +219,9 @@ class GeminiLimiter:
 		self.request_per_day_used += 1
 		self.request_per_minute_used += 1
 		self.tokens_per_minute_used += tokens
-		self.context_used += tokens
 		
+		self.add_context(tokens)
 		await self.async_check_limits(tokens)
-	
-	def check_day_limits(self):
-		"""
-		Checks if the current day's request limit has been reached or if the day has changed.
-
-		Returns:
-			bool: True if requests can still be made within the daily limit, False otherwise.
-		"""
-		return self.request_per_day_used < self.request_per_day_limit or datetime.datetime.now(tz=pytz.timezone("America/New_York")).day != self.start_day.day
 	
 	def clear_context(self):
 		"""
@@ -411,7 +414,7 @@ class GeminiModel:
 		self.generation_config = gemini_model_settings.generation_config
 		
 		self.limiter = GeminiLimiter(
-				start_day=gemini_model_settings.start_day,
+				limit_day=gemini_model_settings.start_day,
 				request_per_day_used=gemini_model_settings.request_per_day_used,
 				request_per_day_limit=gemini_model_settings.request_per_day_limit,
 				request_per_minute_limit=gemini_model_settings.request_per_minute_limit,
@@ -454,7 +457,7 @@ class BaseGeminiChat:
 		self.chat, self.model_name = self.create_chat(model_settings=model_settings, history=history)
 		
 		self.limiter = GeminiLimiter(
-				start_day=model_settings.start_day,
+				limit_day=model_settings.start_day,
 				request_per_day_used=model_settings.request_per_day_used,
 				request_per_day_limit=model_settings.request_per_day_limit,
 				request_per_minute_limit=model_settings.request_per_minute_limit,
@@ -497,7 +500,7 @@ class BaseGeminiChat:
 		
 		self.chat, self.model_name = self.create_chat(model_settings=model_settings, history=history)
 		self.limiter = GeminiLimiter(
-				start_day=model_settings.start_day,
+				limit_day=model_settings.start_day,
 				request_per_day_used=model_settings.request_per_day_used,
 				request_per_day_limit=model_settings.request_per_day_limit,
 				request_per_minute_limit=model_settings.request_per_minute_limit,
@@ -538,7 +541,7 @@ class BaseGeminiChat:
 		Returns:
 			datetime.datetime: Current day being used for tracking daily limits.
 		"""
-		return self.limiter.start_day
+		return self.limiter.limit_day
 	
 	@property
 	def day_usage(self) -> dict[str, typing.Union[int, datetime.datetime]]:
@@ -551,7 +554,7 @@ class BaseGeminiChat:
 		return {
 			"used_requests": self.limiter.request_per_day_used,
 			"requests_limit": self.limiter.request_per_day_limit,
-			"date": self.limiter.start_day,
+			"date": self.limiter.limit_day,
 		}
 	
 	@property
@@ -655,15 +658,7 @@ class GeminiAsyncChat(BaseGeminiChat):
 		)
 		
 		response = await self.chat.send_message(message=message)
-		
-		self.limiter.add_context(
-				sum(
-						candidate.token_count
-						if candidate.token_count is not None
-						else 0
-						for candidate in response.candidates
-				)
-		)
+		self.limiter.add_context(extract_token_count_from_gemini_response(response))
 		
 		return response
 	
@@ -686,16 +681,9 @@ class GeminiAsyncChat(BaseGeminiChat):
 				self.client.models.count_tokens(model=self.model_name, contents=message, config=count_tokens_config).total_tokens
 		)
 		
-		async for part in await self.chat.send_message_stream(message=message):
-			self.limiter.add_context(
-					sum(
-							candidate.token_count
-							if candidate.token_count is not None
-							else 0
-							for candidate in part.candidates
-					)
-			)
-			yield part
+		async for response in await self.chat.send_message_stream(message=message):
+			self.limiter.add_context(extract_token_count_from_gemini_response(response))
+			yield response
 
 
 class GeminiChat(BaseGeminiChat):
@@ -758,15 +746,7 @@ class GeminiChat(BaseGeminiChat):
 		)
 		
 		response = self.chat.send_message(message=message)
-		
-		self.limiter.add_context(
-				sum(
-						candidate.token_count
-						if candidate.token_count is not None
-						else 0
-						for candidate in response.candidates
-				)
-		)
+		self.limiter.add_context(extract_token_count_from_gemini_response(response))
 		
 		return response
 	
@@ -789,16 +769,9 @@ class GeminiChat(BaseGeminiChat):
 				self.client.models.count_tokens(model=self.model_name, contents=message, config=count_tokens_config).total_tokens
 		)
 		
-		for part in self.chat.send_message_stream(message=message):
-			self.limiter.add_context(
-					sum(
-							candidate.token_count
-							if candidate.token_count is not None
-							else 0
-							for candidate in part.candidates
-					)
-			)
-			yield part
+		for response in self.chat.send_message_stream(message=message):
+			self.limiter.add_context(extract_token_count_from_gemini_response(response))
+			yield response
 
 
 class GeminiClientSettings:
@@ -905,15 +878,6 @@ class GeminiClient:
 				else self.generation_config
 		)
 		
-		self.limiter.add_context(
-				sum(
-						candidate.token_count
-						if candidate.token_count is not None
-						else 0
-						for candidate in response.candidates
-				)
-		)
-		
 		return response
 	
 	async def async_generate_content_stream(
@@ -940,22 +904,14 @@ class GeminiClient:
 				self.client.models.count_tokens(model=self.model_name, contents=message, config=count_tokens_config).total_tokens
 		)
 		
-		async for part in await self.client.aio.models.generate_content_stream(
+		async for response in await self.client.aio.models.generate_content_stream(
 				model=self.model_name,
 				contents=message,
 				config=generate_config
 				if generate_config is not None
 				else self.generation_config
 		):
-			self.limiter.add_context(
-					sum(
-							candidate.token_count
-							if candidate.token_count is not None
-							else 0
-							for candidate in part.candidates
-					)
-			)
-			yield part
+			yield response
 	
 	def chat(self, chat_index: int = -1) -> typing.Union[GeminiChat, GeminiAsyncChat]:
 		"""
@@ -1054,7 +1010,7 @@ class GeminiClient:
 		Returns:
 			datetime.datetime: Current day being used for tracking daily limits.
 		"""
-		return self.limiter.start_day
+		return self.limiter.limit_day
 	
 	@property
 	def day_usage(self) -> dict[str, typing.Union[int, datetime.datetime]]:
@@ -1067,7 +1023,7 @@ class GeminiClient:
 		return {
 			"used_requests": self.limiter.request_per_day_used,
 			"requests_limit": self.limiter.request_per_day_limit,
-			"date": self.limiter.start_day
+			"date": self.limiter.limit_day
 		}
 	
 	def generate_content(
@@ -1096,15 +1052,6 @@ class GeminiClient:
 				else self.generation_config
 		)
 		
-		self.limiter.add_context(
-				sum(
-						candidate.token_count
-						if candidate.token_count is not None
-						else 0
-						for candidate in response.candidates
-				)
-		)
-		
 		return response
 	
 	def generate_content_stream(
@@ -1128,22 +1075,14 @@ class GeminiClient:
 				self.client.models.count_tokens(model=self.model_name, contents=message, config=count_tokens_config).total_tokens
 		)
 		
-		for part in self.client.models.generate_content_stream(
+		for response in self.client.models.generate_content_stream(
 				model=self.model_name,
 				contents=message,
 				config=generate_config
 				if generate_config is not None
 				else self.generation_config
 		):
-			self.limiter.add_context(
-					sum(
-							candidate.token_count
-							if candidate.token_count is not None
-							else 0
-							for candidate in part.candidates
-					)
-			)
-			yield part
+			yield response
 	
 	def get_chats(self) -> list[typing.Union[GeminiChat, GeminiAsyncChat]]:
 		"""
