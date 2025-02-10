@@ -1316,7 +1316,7 @@ class TestGeminiModel(unittest.TestCase):
 		"""Test that GeminiLimiter is initialized correctly within GeminiModel."""
 		model_settings = GeminiModelSettings(
 				model_name="gemini-2.0-pro",
-				start_day=datetime.datetime.now(),
+				limit_day=datetime.datetime.now(),
 				request_per_day_used=10,
 				request_per_day_limit=100,
 				request_per_minute_limit=5,
@@ -1328,7 +1328,7 @@ class TestGeminiModel(unittest.TestCase):
 		gemini_model = GeminiModel(gemini_model_settings=model_settings)
 		limiter = gemini_model.limiter
 		
-		self.assertEqual(limiter.limit_day, model_settings.start_day)
+		self.assertEqual(limiter.limit_day, model_settings.limit_day)
 		self.assertEqual(limiter.request_per_day_used, model_settings.request_per_day_used)
 		self.assertEqual(limiter.request_per_day_limit, model_settings.request_per_day_limit)
 		self.assertEqual(
@@ -1663,7 +1663,7 @@ class TestGeminiModelSettings(unittest.TestCase):
 		self.assertEqual(settings.context_used, 0)
 		self.assertEqual(settings.context_limit, data.GeminiLimits.context_limit[model_name])
 		self.assertTrue(settings.raise_error_on_minute_limit)
-		self.assertIsInstance(settings.start_day, datetime.datetime)
+		self.assertIsInstance(settings.limit_day, datetime.datetime)
 	
 	def test_init_default_limits_from_data(self):
 		"""Test that default limits are fetched from data.GeminiLimits."""
@@ -1759,7 +1759,7 @@ class TestGeminiModelSettings(unittest.TestCase):
 		settings = GeminiModelSettings(
 				model_name=model_name,
 				generation_config=generation_config,
-				start_day=start_day,
+				limit_day=start_day,
 				request_per_day_used=request_per_day_used,
 				request_per_day_limit=request_per_day_limit,
 				request_per_minute_limit=request_per_minute_limit,
@@ -1779,7 +1779,7 @@ class TestGeminiModelSettings(unittest.TestCase):
 		
 		self.assertEqual(settings.model_name, model_name)
 		self.assertEqual(settings.generation_config, generation_config)
-		self.assertEqual(settings.start_day, start_day_formatted)
+		self.assertEqual(settings.limit_day, start_day_formatted)
 		self.assertEqual(settings.request_per_day_used, request_per_day_used)
 		self.assertEqual(settings.request_per_day_limit, request_per_day_limit)
 		self.assertEqual(settings.request_per_minute_limit, request_per_minute_limit)

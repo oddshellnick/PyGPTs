@@ -265,7 +265,7 @@ class GeminiModelSettings:
 	Attributes:
 		model_name (str): The name of the Gemini model (e.g., "gemini-pro", "gemini-ultra").
 		generation_config (genai_types.GenerateContentConfigOrDict, optional): Configuration for text generation, controlling aspects like temperature, top_p, and top_k. Defaults to a pre-defined, conservative configuration.
-		start_day (datetime.datetime, optional): The starting date for tracking daily request limits. Defaults to the current date in the "America/New_York" timezone.
+		limit_day (datetime.datetime, optional): The starting date for tracking daily request limits. Defaults to the current date in the "America/New_York" timezone.
 		request_per_day_used (int): The number of requests made today. Defaults to 0.
 		request_per_day_limit (int, optional): The maximum number of requests allowed per day. If not provided, it defaults to the value specified in `data.GeminiLimits` for the given `model_name`.
 		request_per_minute_limit (int, optional): The maximum number of requests allowed per minute. Defaults to the model's limit in `data.GeminiLimits`.
@@ -279,7 +279,7 @@ class GeminiModelSettings:
 			self,
 			model_name: str = data.GeminiModels.Gemini_2_0_flash.latest_stable,
 			generation_config: typing.Optional[genai_types.GenerateContentConfigOrDict] = None,
-			start_day: typing.Optional[datetime.datetime] = None,
+			limit_day: typing.Optional[datetime.datetime] = None,
 			request_per_day_used: int = 0,
 			request_per_day_limit: typing.Optional[int] = None,
 			request_per_minute_limit: typing.Optional[int] = None,
@@ -294,7 +294,7 @@ class GeminiModelSettings:
 		Args:
 			model_name (str): The name of the Gemini model to use. Defaults to "gemini_2_0_flash".
 			generation_config (genai.GenerationConfig): Configuration for text generation. Defaults to a conservative configuration.
-			start_day (datetime.datetime): The start day for tracking usage limits. Defaults to the current day in the America/New_York time zone.
+			limit_day (datetime.datetime): The limit day for tracking usage limits. Defaults to the current day in the America/New_York time zone.
 			request_per_day_used (int): The number of requests used so far today. Defaults to 0.
 			request_per_day_limit (typing.Optional[int]): The maximum number of requests allowed per day. Defaults to the limit specified in "data.GeminiLimits" for the chosen model.
 			request_per_minute_limit (typing.Optional[int]): The maximum number of requests allowed per minute. Defaults to the limit specified in "data.GeminiLimits" for the chosen model.
@@ -334,10 +334,10 @@ class GeminiModelSettings:
 					]
 			)
 		
-		if start_day is None:
-			start_day = datetime.datetime.now(tz=pytz.timezone("America/New_York"))
+		if limit_day is None:
+			limit_day = datetime.datetime.now(tz=pytz.timezone("America/New_York"))
 		else:
-			start_day = start_day.astimezone(pytz.timezone("America/New_York"))
+			limit_day = limit_day.astimezone(pytz.timezone("America/New_York"))
 		
 		self.model_name = model_name
 		self.generation_config = generation_config
@@ -345,11 +345,11 @@ class GeminiModelSettings:
 		self.request_per_day_used = request_per_day_used
 		self.context_used = context_used
 		
-		self.start_day = datetime.datetime(
-				year=start_day.year,
-				month=start_day.month,
-				day=start_day.day,
-				tzinfo=start_day.tzinfo,
+		self.limit_day = datetime.datetime(
+				year=limit_day.year,
+				month=limit_day.month,
+				day=limit_day.day,
+				tzinfo=limit_day.tzinfo,
 		)
 		
 		base_model_name = find_base_model(model_name)
@@ -414,7 +414,7 @@ class GeminiModel:
 		self.generation_config = gemini_model_settings.generation_config
 		
 		self.limiter = GeminiLimiter(
-				limit_day=gemini_model_settings.start_day,
+				limit_day=gemini_model_settings.limit_day,
 				request_per_day_used=gemini_model_settings.request_per_day_used,
 				request_per_day_limit=gemini_model_settings.request_per_day_limit,
 				request_per_minute_limit=gemini_model_settings.request_per_minute_limit,
@@ -458,7 +458,7 @@ class BaseGeminiChat:
 		self.chat, self.model_name = self.create_chat(model_settings=model_settings, history=history)
 		
 		self.limiter = GeminiLimiter(
-				limit_day=model_settings.start_day,
+				limit_day=model_settings.limit_day,
 				request_per_day_used=model_settings.request_per_day_used,
 				request_per_day_limit=model_settings.request_per_day_limit,
 				request_per_minute_limit=model_settings.request_per_minute_limit,
@@ -502,7 +502,7 @@ class BaseGeminiChat:
 		
 		self.chat, self.model_name = self.create_chat(model_settings=model_settings, history=history)
 		self.limiter = GeminiLimiter(
-				limit_day=model_settings.start_day,
+				limit_day=model_settings.limit_day,
 				request_per_day_used=model_settings.request_per_day_used,
 				request_per_day_limit=model_settings.request_per_day_limit,
 				request_per_minute_limit=model_settings.request_per_minute_limit,
