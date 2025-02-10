@@ -286,7 +286,7 @@ class GeminiModelSettings:
 			tokens_per_minute_limit: typing.Optional[int] = None,
 			context_used: int = 0,
 			context_limit: typing.Optional[int] = None,
-			raise_error_on_minute_limit: bool = True
+			raise_error_on_minute_limit: bool = True,
 	):
 		"""
 		Initializes an instance of the GeminiSettings class.
@@ -442,6 +442,7 @@ class BaseGeminiChat:
 			self,
 			client: genai.Client,
 			model_settings: GeminiModelSettings,
+			is_async: typing.Optional[bool] = None,
 			history: typing.Optional[list[types.gemini_history]] = None
 	):
 		"""
@@ -471,6 +472,7 @@ class BaseGeminiChat:
 		)
 		
 		self.settings = model_settings
+		self.is_async = is_async
 	
 	def create_chat(
 			self,
@@ -622,7 +624,12 @@ class GeminiAsyncChat(BaseGeminiChat):
 			model_settings: GeminiModelSettings,
 			history: typing.Optional[list[types.gemini_history]] = None
 	):
-		super().__init__(client=client, model_settings=model_settings, history=history)
+		super().__init__(
+				client=client,
+				model_settings=model_settings,
+				is_async=True,
+				history=history
+		)
 	
 	def create_chat(
 			self,
@@ -710,7 +717,12 @@ class GeminiChat(BaseGeminiChat):
 			model_settings (GeminiModelSettings): The settings for the Gemini model.
 			history (typing.Optional[list[types.gemini_history]]): The initial chat history. Defaults to None.
 		"""
-		super().__init__(client=client, model_settings=model_settings, history=history)
+		super().__init__(
+				client=client,
+				model_settings=model_settings,
+				is_async=False,
+				history=history
+		)
 	
 	def create_chat(
 			self,
@@ -939,10 +951,12 @@ class GeminiClient:
 		Raises:
 			GeminiChatTypeException: If the chat session at the given index is not an asynchronous chat (`GeminiAsyncChat`).
 		"""
-		if not isinstance(self.chat(chat_index), GeminiAsyncChat):
+		chat = self.chat(chat_index)
+		
+		if not chat.is_async:
 			raise errors.GeminiChatTypeException(chat_index, "asynchronous")
 		
-		return await self.chats[chat_index].send_message(message=message)
+		return await chat.send_message(message=message)
 	
 	async def async_send_message_stream(self, message: types.gemini_message_input, chat_index: int = -1) -> typing.AsyncGenerator[GenerateContentResponse, typing.Any]:
 		"""
@@ -958,10 +972,12 @@ class GeminiClient:
 		Raises:
 			GeminiChatTypeException: If the chat session at the given index is not an asynchronous chat (`GeminiAsyncChat`).
 		"""
-		if not isinstance(self.chat(chat_index), GeminiAsyncChat):
+		chat = self.chat(chat_index)
+		
+		if not chat.is_async:
 			raise errors.GeminiChatTypeException(chat_index, "asynchronous")
 		
-		return self.chats[chat_index].send_message_stream(message=message)
+		return chat.send_message_stream(message=message)
 	
 	def check_day_limits(self) -> bool:
 		"""
@@ -1132,10 +1148,12 @@ class GeminiClient:
 		Raises:
 			GeminiChatTypeException: If the chat session at the given index is not a synchronous chat (`GeminiChat`).
 		"""
-		if not isinstance(self.chat(chat_index), GeminiChat):
+		chat = self.chat(chat_index)
+		
+		if chat.is_async:
 			raise errors.GeminiChatTypeException(chat_index, "synchronous")
 		
-		return self.chats[chat_index].send_message(message=message)
+		return chat.send_message(message=message)
 	
 	def send_message_stream(self, message: types.gemini_message_input, chat_index: int = -1) -> typing.Generator[GenerateContentResponse, typing.Any, None]:
 		"""
@@ -1151,10 +1169,12 @@ class GeminiClient:
 		Raises:
 			GeminiChatTypeException: If the chat session at the given index is not a synchronous chat (`GeminiChat`).
 		"""
-		if not isinstance(self.chat(chat_index), GeminiChat):
+		chat = self.chat(chat_index)
+		
+		if chat.is_async:
 			raise errors.GeminiChatTypeException(chat_index, "synchronous")
 		
-		return self.chats[chat_index].send_message_stream(message=message)
+		return chat.send_message_stream(message=message)
 	
 	@property
 	def model_settings(self) -> GeminiModelSettings:

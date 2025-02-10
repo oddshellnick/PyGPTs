@@ -246,9 +246,12 @@ class TestGeminiClient(unittest.IsolatedAsyncioTestCase):
 	@patch("PyGPTs.Gemini.GeminiModel")
 	async def test_async_send_message(self, mock_gemini_model_init, mock_genai_client_init):
 		"""Test async_send_message method calls chat"s send_message."""
-		mock_chat_session1 = MagicMock(spec=GeminiAsyncChat)
+		mock_chat_session1 = MagicMock(spec=GeminiAsyncChat, is_async=True)
+		mock_chat_session1.is_async = True
 		mock_chat_session1.send_message_stream = MagicMock()
-		mock_chat_session2 = MagicMock(spec=GeminiChat)
+		
+		mock_chat_session2 = MagicMock(spec=GeminiAsyncChat, is_async=False)
+		mock_chat_session2.is_async = False
 		mock_chat_session2.send_message_stream = MagicMock()
 		
 		client_settings = GeminiClientSettings(
@@ -278,9 +281,10 @@ class TestGeminiClient(unittest.IsolatedAsyncioTestCase):
 	@patch("PyGPTs.Gemini.GeminiModel")
 	async def test_async_send_message_stream(self, mock_gemini_model_init, mock_genai_client_init):
 		"""Test async_send_message_stream method calls chat"s send_message_stream."""
-		mock_chat_session1 = MagicMock(spec=GeminiAsyncChat)
+		mock_chat_session1 = MagicMock(spec=GeminiAsyncChat, is_async=True)
 		mock_chat_session1.send_message_stream = MagicMock()
-		mock_chat_session2 = MagicMock(spec=GeminiChat)
+		
+		mock_chat_session2 = MagicMock(spec=GeminiChat, is_async=False)
 		mock_chat_session2.send_message_stream = MagicMock()
 		
 		client_settings = GeminiClientSettings(
@@ -310,7 +314,7 @@ class TestGeminiClient(unittest.IsolatedAsyncioTestCase):
 	@patch("PyGPTs.Gemini.GeminiModel")
 	def test_chat_method(self, mock_gemini_model_init, mock_genai_client_init):
 		"""Test chat method to access chat session."""
-		mock_chat_session = MagicMock(spec=GeminiChat)
+		mock_chat_session = MagicMock(spec=GeminiAsyncChat, is_async=False)
 		client_settings = GeminiClientSettings(
 				api_key="test_api_key",
 				model_settings=GeminiModelSettings(),
@@ -326,7 +330,7 @@ class TestGeminiClient(unittest.IsolatedAsyncioTestCase):
 		client_instance = GeminiClient(gemini_client_settings=client_settings)
 		retrieved_chat = client_instance.chat(chat_index=0)
 		
-		self.assertIsInstance(retrieved_chat, GeminiChat)
+		self.assertIsInstance(retrieved_chat, GeminiAsyncChat)
 		self.assertEqual(retrieved_chat, mock_chat_session)
 	
 	@patch("google.genai.Client")
@@ -352,7 +356,7 @@ class TestGeminiClient(unittest.IsolatedAsyncioTestCase):
 	@patch("PyGPTs.Gemini.GeminiModel")
 	def test_close_chat(self, mock_gemini_model_init, mock_genai_client_init):
 		"""Test close_chat method removes chat session."""
-		mock_chat_session = MagicMock(spec=GeminiChat)
+		mock_chat_session = MagicMock(spec=GeminiAsyncChat, is_async=False)
 		client_settings = GeminiClientSettings(
 				api_key="test_api_key",
 				model_settings=GeminiModelSettings(),
@@ -642,8 +646,8 @@ class TestGeminiClient(unittest.IsolatedAsyncioTestCase):
 	@patch("google.genai.Client")
 	def test_get_chats(self, mock_genai_client_init):
 		"""Test get_chats method yields chat histories."""
-		mock_chat_session1 = MagicMock(spec=GeminiChat)
-		mock_chat_session2 = MagicMock(spec=GeminiChat)
+		mock_chat_session1 = MagicMock(spec=GeminiAsyncChat, is_async=False)
+		mock_chat_session2 = MagicMock(spec=GeminiAsyncChat, is_async=False)
 		mock_chats = [mock_chat_session1, mock_chat_session2]
 		
 		mock_genai_client = MagicMock(spec=Client)
@@ -773,10 +777,8 @@ class TestGeminiClient(unittest.IsolatedAsyncioTestCase):
 	@patch("PyGPTs.Gemini.GeminiModel")
 	def test_send_message(self, mock_gemini_model_init, mock_genai_client_init):
 		"""Test send_message method calls chat"s send_message."""
-		mock_chat_session1 = MagicMock(spec=GeminiChat)
-		mock_chat_session1.send_message_stream = MagicMock()
-		mock_chat_session2 = MagicMock(spec=GeminiAsyncChat)
-		mock_chat_session2.send_message_stream = MagicMock()
+		mock_chat_session1 = MagicMock(spec=GeminiChat, is_async=False, send_message=MagicMock())
+		mock_chat_session2 = MagicMock(spec=GeminiAsyncChat, is_async=True, send_message=AsyncMock())
 		
 		client_settings = GeminiClientSettings(
 				api_key="test_api_key",
@@ -799,16 +801,14 @@ class TestGeminiClient(unittest.IsolatedAsyncioTestCase):
 		
 		with self.assertRaises(errors.GeminiChatTypeException) as err:
 			client_instance.send_message(message=message, chat_index=1)
-		self.assertEqual(str(err.exception), f"Chat with index 1 is not synchronous")
+		self.assertEqual(str(err.exception), "Chat with index 1 is not synchronous")
 	
 	@patch("google.genai.Client")
 	@patch("PyGPTs.Gemini.GeminiModel")
 	def test_send_message_stream(self, mock_gemini_model_init, mock_genai_client_init):
 		"""Test send_message_stream method calls chat"s send_message_stream."""
-		mock_chat_session1 = MagicMock(spec=GeminiChat)
-		mock_chat_session1.send_message_stream = MagicMock()
-		mock_chat_session2 = MagicMock(spec=GeminiAsyncChat)
-		mock_chat_session2.send_message_stream = MagicMock()
+		mock_chat_session1 = MagicMock(spec=GeminiChat, is_async=False, send_message_stream=MagicMock())
+		mock_chat_session2 = MagicMock(spec=GeminiAsyncChat, is_async=True, send_message_stream=AsyncMock())
 		
 		client_settings = GeminiClientSettings(
 				api_key="test_api_key",
@@ -831,7 +831,7 @@ class TestGeminiClient(unittest.IsolatedAsyncioTestCase):
 		
 		with self.assertRaises(errors.GeminiChatTypeException) as err:
 			client_instance.send_message_stream(message=message, chat_index=1)
-		self.assertEqual(str(err.exception), f"Chat with index 1 is not synchronous")
+		self.assertEqual(str(err.exception), "Chat with index 1 is not synchronous")
 	
 	@patch("google.genai.Client")
 	@patch("PyGPTs.Gemini.GeminiAsyncChat")
@@ -843,7 +843,7 @@ class TestGeminiClient(unittest.IsolatedAsyncioTestCase):
 		mock_genai_client.settings = None
 		mock_genai_client_init.return_value = mock_genai_client
 		
-		mock_gemini_async_chat = MagicMock(spec=GeminiAsyncChat)
+		mock_gemini_async_chat = MagicMock(spec=GeminiAsyncChat, is_async=True)
 		mock_gemini_async_chat_init.return_value = mock_gemini_async_chat
 		
 		client_instance = GeminiClient(gemini_client_settings=client_settings)
@@ -867,7 +867,7 @@ class TestGeminiClient(unittest.IsolatedAsyncioTestCase):
 		mock_genai_client.settings = None
 		mock_genai_client_init.return_value = mock_genai_client
 		
-		mock_gemini_chat = MagicMock(spec=GeminiChat)
+		mock_gemini_chat = MagicMock(spec=GeminiChat, is_async=False)
 		mock_gemini_chat_init.return_value = mock_gemini_chat
 		
 		client_instance = GeminiClient(gemini_client_settings=client_settings)
@@ -910,7 +910,12 @@ class TestGeminiChat(unittest.TestCase):
 		
 		with patch("PyGPTs.Gemini.BaseGeminiChat.__init__") as mock_base_init:
 			GeminiChat(client=mock_client, model_settings=model_settings, history=history)
-			mock_base_init.assert_called_once_with(client=mock_client, model_settings=model_settings, history=history)
+			mock_base_init.assert_called_once_with(
+					client=mock_client,
+					model_settings=model_settings,
+					is_async=False,
+					history=history
+			)
 	
 	def test_send_message(self):
 		"""Test send_message method in GeminiChat."""
@@ -1000,7 +1005,12 @@ class TestGeminiAsyncChat(unittest.IsolatedAsyncioTestCase):
 		
 		with patch("PyGPTs.Gemini.BaseGeminiChat.__init__") as mock_base_init:
 			GeminiAsyncChat(client=mock_client, model_settings=model_settings, history=history)
-			mock_base_init.assert_called_once_with(client=mock_client, model_settings=model_settings, history=history)
+			mock_base_init.assert_called_once_with(
+					client=mock_client,
+					model_settings=model_settings,
+					is_async=True,
+					history=history
+			)
 	
 	async def test_send_message(self):
 		"""Test send_message method in GeminiAsyncChat."""

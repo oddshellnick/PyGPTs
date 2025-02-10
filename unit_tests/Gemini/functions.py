@@ -24,9 +24,9 @@ class TestGeminiResponseTokenCountExtraction(unittest.TestCase):
 			]
 		else:
 			mock_candidates = None
-
+		
 		mock_gemini_response = MagicMock(spec=GenerateContentResponse, candidates=mock_candidates)
-
+		
 		token_count = extract_token_count_from_gemini_response(mock_gemini_response)
 		self.assertEqual(token_count, expected_count)
 
@@ -48,7 +48,7 @@ class TestGeminiResponseTextExtraction(unittest.TestCase):
 		"""Test extract_text_from_gemini_response function."""
 		if candidates is not None:
 			mock_candidates = []
-
+		
 			for candidate in candidates:
 				if candidate["content"] is not None:
 					if candidate["content"]["parts"] is not None:
@@ -57,17 +57,17 @@ class TestGeminiResponseTextExtraction(unittest.TestCase):
 							mock_parts.append(MagicMock(spec=Part, text=part))
 					else:
 						mock_parts = None
-
+		
 					mock_content = MagicMock(spec=Content, parts=mock_parts)
 				else:
 					mock_content = None
-
+		
 				mock_candidates.append(MagicMock(spec=Candidate, content=mock_content))
 		else:
 			mock_candidates = None
-
+		
 		mock_gemini_response = MagicMock(spec=GenerateContentResponse, candidates=mock_candidates)
-
+		
 		extracted_text = extract_text_from_gemini_response(mock_gemini_response)
 		self.assertEqual(extracted_text, expected_text)
 
