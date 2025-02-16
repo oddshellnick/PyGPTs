@@ -1,13 +1,18 @@
-import unittest
 from PyGPTs.Gemini.functions import find_base_model
 from PyGPTs.Gemini.data import (
 	GeminiLimits,
 	GeminiModels
 )
 from PyVarTools.python_instances_tools import get_class_attributes
+from unittest import (
+	TestCase,
+	TestLoader,
+	TestSuite,
+	TextTestRunner
+)
 
 
-class TestGeminiLimitsIntegration(unittest.TestCase):
+class TestGeminiLimitsIntegration(TestCase):
 	def test_gemini_limits_completeness(self):
 		"""
 		Test that all base Gemini models defined in GeminiModels are also present in GeminiLimits.
@@ -41,10 +46,15 @@ class TestGeminiLimitsIntegration(unittest.TestCase):
 				self.fail(f"Could not extract base model name from '{model_name}' using regex.")
 
 
-def data_test_suite():
-	suite = unittest.TestSuite()
-	test_loader = unittest.TestLoader()
+def data_test_suite() -> TestSuite:
+	suite = TestSuite()
+	test_loader = TestLoader()
 	
 	suite.addTest(test_loader.loadTestsFromTestCase(TestGeminiLimitsIntegration))
 	
 	return suite
+
+
+if __name__ == "__main__":
+	runner = TextTestRunner()
+	runner.run(data_test_suite())

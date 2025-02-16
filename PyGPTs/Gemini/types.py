@@ -1,8 +1,12 @@
-import typing
 from google.genai.types import Content
+from typing import (
+	Iterable,
+	TypedDict,
+	Union
+)
 
 
-class GeminiFileData(typing.TypedDict):
+class GeminiFileData(TypedDict):
 	"""
 	Represents file data for Gemini.
 
@@ -17,10 +21,10 @@ class GeminiFileData(typing.TypedDict):
 	file_uri: str
 
 
-gemini_content_part = typing.Union[str, GeminiFileData]
+gemini_content_part = Union[str, GeminiFileData]
 
 
-class GeminiContentDict(typing.TypedDict):
+class GeminiContentDict(TypedDict):
 	"""
 	Represents a dictionary for Gemini content.
 
@@ -35,11 +39,11 @@ class GeminiContentDict(typing.TypedDict):
 	role: str
 
 
-gemini_history = typing.Union[GeminiContentDict, Content]
-gemini_message_input = typing.Union[str, GeminiContentDict, GeminiFileData]
-gemini_generate_input = typing.Union[
+gemini_history = Union[GeminiContentDict, Content]
+gemini_message_input = Union[str, GeminiContentDict, GeminiFileData]
+gemini_generate_input = Union[
 	str,
 	GeminiContentDict,
 	GeminiFileData,
-	typing.Iterable[typing.Union[GeminiContentDict, GeminiFileData]]
+	Iterable[Union[GeminiContentDict, GeminiFileData]]
 ]

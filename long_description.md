@@ -34,7 +34,7 @@ PyGPTs simplifies interaction with various AI models, including Hugging Face Tra
 **Gemini:**
 
 ```python
-from PyGPTs.Gemini import GeminiClientSettings, GeminiClient
+from PyGPTs.Gemini.client import GeminiClientSettings, GeminiClient
 
 settings = GeminiClientSettings(api_key="YOUR_API_KEY")
 gemini = GeminiClient(settings)

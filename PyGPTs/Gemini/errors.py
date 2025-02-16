@@ -24,9 +24,7 @@ class GeminiContextLimitException(Exception):
 	"""
 	
 	def __init__(self):
-		"""
-		Initializes a new instance of `GeminiContextLimitException`.
-		"""
+		"""Initializes the exception with a default message."""
 		super().__init__("Model context limit reached")
 
 
