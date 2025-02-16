@@ -1,6 +1,11 @@
-import unittest
 from unittest.mock import MagicMock
 from parameterized import parameterized
+from unittest import (
+	TestCase,
+	TestLoader,
+	TestSuite,
+	TextTestRunner
+)
 from google.genai.types import (
 	Candidate,
 	Content,
@@ -14,7 +19,7 @@ from PyGPTs.Gemini.functions import (
 )
 
 
-class TestGeminiResponseTokenCountExtraction(unittest.TestCase):
+class TestGeminiResponseTokenCountExtraction(TestCase):
 	@parameterized.expand([(None, 0), ([], 0), ([None], 0), ([0], 0), ([15, None], 15), ([10, 20], 30)])
 	def test_extract_token_count_from_gemini_response(self, candidates, expected_count):
 		"""Test extract_token_count_from_gemini_response function."""
@@ -31,7 +36,7 @@ class TestGeminiResponseTokenCountExtraction(unittest.TestCase):
 		self.assertEqual(token_count, expected_count)
 
 
-class TestGeminiResponseTextExtraction(unittest.TestCase):
+class TestGeminiResponseTextExtraction(TestCase):
 	@parameterized.expand(
 			[
 				(None, ""),
@@ -72,7 +77,7 @@ class TestGeminiResponseTextExtraction(unittest.TestCase):
 		self.assertEqual(extracted_text, expected_text)
 
 
-class TestFindBaseModel(unittest.TestCase):
+class TestFindBaseModel(TestCase):
 	@parameterized.expand(
 			[
 				("gemini-1.0-pro", "gemini-1.0-pro"),
@@ -97,9 +102,9 @@ class TestFindBaseModel(unittest.TestCase):
 		self.assertEqual(actual_base_model, expected_base_model)
 
 
-def functions_test_suite():
-	suite = unittest.TestSuite()
-	test_loader = unittest.TestLoader()
+def functions_test_suite() -> TestSuite:
+	suite = TestSuite()
+	test_loader = TestLoader()
 	
 	suite.addTest(test_loader.loadTestsFromTestCase(TestFindBaseModel))
 	suite.addTest(test_loader.loadTestsFromTestCase(TestGeminiResponseTextExtraction))
@@ -108,3 +113,8 @@ def functions_test_suite():
 	)
 	
 	return suite
+
+
+if __name__ == "__main__":
+	runner = TextTestRunner()
+	runner.run(functions_test_suite())

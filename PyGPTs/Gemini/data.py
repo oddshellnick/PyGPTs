@@ -75,9 +75,9 @@ class GeminiModels:
 		Names for Gemini 2.0 Flash Lite models.
 
 		Attributes:
-			exp (str): The name of the experimental Gemini 2.0 Flash Lite model.
+			preview (str): The name of the experimental Gemini 2.0 Flash Lite model.
 		"""
-		exp = "gemini-2.0-flash-lite-preview-02-05"
+		preview = "gemini-2.0-flash-lite-preview-02-05"
 	
 	@dataclass(frozen=True)
 	class Gemini_2_0_flash_thinking:
